@@ -3,67 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitor de Temperatura e Humidade</title>
+  <title>Monitor de Temperatura, Humidade e Vibração</title>
   <style>
     body {
       font-family: 'Poppins', Arial, sans-serif;
       text-align: center;
       margin: 0;
-      padding: 30px;
+      padding: 40px;
       background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
       min-height: 100vh;
       color: #333;
     }
     h1 {
-      font-weight: 600;
-      font-size: 2.5em;
-      color: #0288d1;
-      margin-bottom: 20px;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+      font-weight: 700;
+      font-size: 2.8em;
+      color: #0277bd;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
     }
     #readings {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 20px;
-      max-width: 1000px;
-      margin: 0 auto;
+      gap: 25px;
+      max-width: 1200px;
+      margin: 0 auto 40px;
     }
     .reading {
       background: white;
-      border-radius: 15px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-      padding: 20px;
-      width: 250px;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      width: 280px;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
-      margin: 10px;
+      position: relative;
+      overflow: hidden;
     }
     .reading:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      transform: translateY(-8px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    }
+    .reading::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, #0288d1, #4fc3f7);
     }
     .reading p {
-      margin: 8px 0;
+      margin: 10px 0;
       font-size: 16px;
-      color: #444;
+      color: #555;
+    }
+    .reading .label {
+      font-weight: 600;
+      color: #0277bd;
     }
     .reading span {
       font-weight: 500;
       color: #0288d1;
       font-size: 18px;
     }
+    .icon {
+      font-size: 24px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
     .error {
       color: #d32f2f;
       font-size: 16px;
       margin-top: 20px;
     }
+    #chartContainer {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 <body>
-  <h1>Monitor de Temperatura e Humidade</h1>
+  <h1>Monitor de Temperatura, Humidade e Vibração</h1>
   <div id="readings"></div>
+  <div id="chartContainer">
+    <canvas id="tempHumChart"></canvas>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    let chartData = {
+      labels: [],
+      temperatures: [],
+      humidities: [],
+      vibrations: []
+    };
+
     async function fetchReadings() {
       try {
         const response = await fetch(
@@ -72,21 +110,93 @@
         const data = await response.json();
         const readingsDiv = document.getElementById('readings');
         readingsDiv.innerHTML = '';
+
+        // Reset chart data
+        chartData.labels = [];
+        chartData.temperatures = [];
+        chartData.humidities = [];
+        chartData.vibrations = [];
+
         data.feeds.reverse().forEach(entry => {
           const date = new Date(entry.created_at);
           readingsDiv.innerHTML += `
             <div class="reading">
-              <p><strong>Data e Hora:</strong> ${date.toLocaleString('pt-BR')}</p>
-              <p>Temperatura: <span>${entry.field1} °C</span></p>
-              <p>Humidade: <span>${entry.field2} %</span></p>
+              <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
+              <p><span class="label"><span class="icon">🌡️</span>Temperatura:</span> <span>${entry.field1} °C</span></p>
+              <p><span class="label"><span class="icon">💧</span>Humidade:</span> <span>${entry.field2} %</span></p>
+              <p><span class="label"><span class="icon">🔔</span>Vibração:</span> <span>${entry.field3 == 1 ? 'Detectada' : 'Não Detectada'}</span></p>
             </div>
           `;
+
+          // Add data to chart
+          chartData.labels.push(date.toLocaleTimeString('pt-BR'));
+          chartData.temperatures.push(parseFloat(entry.field1));
+          chartData.humidities.push(parseFloat(entry.field2));
+          chartData.vibrations.push(parseInt(entry.field3));
         });
+
+        // Update chart
+        updateChart();
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         document.getElementById('readings').innerHTML = '<p class="error">Erro ao carregar os dados.</p>';
       }
     }
+
+    function updateChart() {
+      const ctx = document.getElementById('tempHumChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [
+            {
+              label: 'Temperatura (°C)',
+              data: chartData.temperatures,
+              borderColor: '#0288d1',
+              backgroundColor: 'rgba(2, 136, 209, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Humidade (%)',
+              data: chartData.humidities,
+              borderColor: '#4fc3f7',
+              backgroundColor: 'rgba(79, 195, 247, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Vibração (0/1)',
+              data: chartData.vibrations,
+              borderColor: '#ff6f61',
+              backgroundColor: 'rgba(255, 111, 97, 0.2)',
+              fill: true,
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Valores'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Hora'
+              }
+            }
+          }
+        }
+      });
+    }
+
     fetchReadings();
     setInterval(fetchReadings, 30000); // Atualiza a cada 30 segundos
   </script>
