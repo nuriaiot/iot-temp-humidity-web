@@ -1,42 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IoT Temperature & Humidity</title>
+  <title>Monitor de Temperatura e Humidade</title>
   <style>
     body {
       font-family: 'Poppins', Arial, sans-serif;
       text-align: center;
-      background: #f0f0f0;
       margin: 0;
-      padding: 20px;
+      padding: 30px;
+      background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+      min-height: 100vh;
+      color: #333;
     }
     h1 {
-      color: #333;
       font-weight: 600;
+      font-size: 2.5em;
+      color: #0288d1;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     }
     #readings {
-      margin-top: 20px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      display: inline-block;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
     }
     .reading {
-      margin: 15px 0;
-      font-size: 18px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      width: 250px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      margin: 10px;
+    }
+    .reading:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    .reading p {
+      margin: 8px 0;
+      font-size: 16px;
       color: #444;
     }
     .reading span {
       font-weight: 500;
-      color: #1a73e8;
+      color: #0288d1;
+      font-size: 18px;
+    }
+    .error {
+      color: #d32f2f;
+      font-size: 16px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>Temperature & Humidity Monitor</h1>
+  <h1>Monitor de Temperatura e Humidade</h1>
   <div id="readings"></div>
 
   <script>
@@ -52,19 +76,19 @@
           const date = new Date(entry.created_at);
           readingsDiv.innerHTML += `
             <div class="reading">
-              Time: ${date.toLocaleString()}<br>
-              Temperature: <span>${entry.field1} °C</span><br>
-              Humidity: <span>${entry.field2} %</span><br>
+              <p><strong>Data e Hora:</strong> ${date.toLocaleString('pt-BR')}</p>
+              <p>Temperatura: <span>${entry.field1} °C</span></p>
+              <p>Humidade: <span>${entry.field2} %</span></p>
             </div>
           `;
         });
       } catch (error) {
-        console.error('Error fetching data:', error);
-        document.getElementById('readings').innerHTML = '<p>Error loading data.</p>';
+        console.error('Erro ao buscar dados:', error);
+        document.getElementById('readings').innerHTML = '<p class="error">Erro ao carregar os dados.</p>';
       }
     }
     fetchReadings();
-    setInterval(fetchReadings, 30000); // Update every 30 seconds
+    setInterval(fetchReadings, 30000); // Atualiza a cada 30 segundos
   </script>
 </body>
 </html>
