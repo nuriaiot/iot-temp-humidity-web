@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoT Temperature & Humidity</title>
+  <style>
+    body {
+      font-family: 'Poppins', Arial, sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+      font-weight: 600;
+    }
+    #readings {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: inline-block;
+    }
+    .reading {
+      margin: 15px 0;
+      font-size: 18px;
+      color: #444;
+    }
+    .reading span {
+      font-weight: 500;
+      color: #1a73e8;
+    }
+  </style>
+</head>
+<body>
+  <h1>Temperature & Humidity Monitor</h1>
+  <div id="readings"></div>
+
+  <script>
+    async function fetchReadings() {
+      try {
+        const response = await fetch(
+          'https://api.thingspeak.com/channels/2928081/feeds.json?api_key=R7JTT7FALUMYEIBZ&results=10'
+        );
+        const data = await response.json();
+        const readingsDiv = document.getElementById('readings');
+        readingsDiv.innerHTML = '';
+        data.feeds.reverse().forEach(entry => {
+          const date = new Date(entry.created_at);
+          readingsDiv.innerHTML += `
+            <div class="reading">
+              Time: ${date.toLocaleString()}<br>
+              Temperature: <span>${entry.field1} °C</span><br>
+              Humidity: <span>${entry.field2} %</span><br>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('readings').innerHTML = '<p>Error loading data.</p>';
+      }
+    }
+    fetchReadings();
+    setInterval(fetchReadings, 30000); // Update every 30 seconds
+  </script>
+</body>
+</html>
