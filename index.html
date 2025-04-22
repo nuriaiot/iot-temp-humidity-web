@@ -3,47 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitor de Temperatura, Humidade e Vibração</title>
+  <title>Plataforma de Monitoria de Cortes Não Programados Durante o Fornecimento de Energia Eléctrica para o Bairro de Jardim Electricidade de Moçambique</title>
   <style>
     body {
       font-family: 'Poppins', Arial, sans-serif;
       text-align: center;
       margin: 0;
       padding: 40px;
-      background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
       min-height: 100vh;
       color: #333;
     }
     h1 {
       font-weight: 700;
-      font-size: 2.8em;
-      color: #0277bd;
+      font-size: 2.2em;
+      color: #ffffff;
       margin-bottom: 30px;
-      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
     }
-    #readings {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 25px;
-      max-width: 1200px;
-      margin: 0 auto 40px;
-    }
-    .reading {
+    #latestReading {
       background: white;
       border-radius: 20px;
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
       padding: 25px;
-      width: 280px;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      max-width: 300px;
+      margin: 0 auto 40px;
       position: relative;
       overflow: hidden;
     }
-    .reading:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-    }
-    .reading::before {
+    #latestReading::before {
       content: '';
       position: absolute;
       top: 0;
@@ -52,16 +40,16 @@
       height: 5px;
       background: linear-gradient(90deg, #0288d1, #4fc3f7);
     }
-    .reading p {
+    #latestReading p {
       margin: 10px 0;
       font-size: 16px;
       color: #555;
     }
-    .reading .label {
+    #latestReading .label {
       font-weight: 600;
       color: #0277bd;
     }
-    .reading span {
+    #latestReading span {
       font-weight: 500;
       color: #0288d1;
       font-size: 18px;
@@ -87,8 +75,8 @@
   </style>
 </head>
 <body>
-  <h1>Monitor de Temperatura, Humidade e Vibração</h1>
-  <div id="readings"></div>
+  <h1>Plataforma de Monitoria de Cortes Não Programados Durante o Fornecimento de Energia Eléctrica para o Bairro de Jardim Electricidade de Moçambique</h1>
+  <div id="latestReading"></div>
   <div id="chartContainer">
     <canvas id="tempHumChart"></canvas>
   </div>
@@ -97,9 +85,10 @@
   <script>
     let chartData = {
       labels: [],
-      temperatures: [],
       humidities: [],
-      vibrations: []
+      temperatures: [],
+      vibrations: [],
+      powerStates: []
     };
 
     async function fetchReadings() {
@@ -108,38 +97,41 @@
           'https://api.thingspeak.com/channels/2928081/feeds.json?api_key=R7JTT7FALUMYEIBZ&results=10'
         );
         const data = await response.json();
-        const readingsDiv = document.getElementById('readings');
-        readingsDiv.innerHTML = '';
+        const latestReadingDiv = document.getElementById('latestReading');
 
         // Reset chart data
         chartData.labels = [];
-        chartData.temperatures = [];
         chartData.humidities = [];
+        chartData.temperatures = [];
         chartData.vibrations = [];
+        chartData.powerStates = [];
 
-        data.feeds.reverse().forEach(entry => {
+        // Display only the latest reading
+        const latestEntry = data.feeds[data.feeds.length - 1];
+        const date = new Date(latestEntry.created_at);
+        latestReadingDiv.innerHTML = `
+          <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
+          <p><span class="label"><span class="icon">💧</span>Humidade:</span> <span>${latestEntry.field1} %</span></p>
+          <p><span class="label"><span class="icon">🌡️</span>Temperatura:</span> <span>${parseFloat(latestEntry.field2).toFixed(2)} °C</span></p>
+          <p><span class="label"><span class="icon">🔔</span>Vibração:</span> <span>${latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada'}</span></p>
+          <p><span class="label"><span class="icon">⚡</span>Energia:</span> <span>${latestEntry.field4 == 1 ? 'Presente' : 'Ausente'}</span></p>
+        `;
+
+        // Populate chart data with all entries
+        data.feeds.forEach(entry => {
           const date = new Date(entry.created_at);
-          readingsDiv.innerHTML += `
-            <div class="reading">
-              <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
-              <p><span class="label"><span class="icon">🌡️</span>Temperatura:</span> <span>${entry.field1} °C</span></p>
-              <p><span class="label"><span class="icon">💧</span>Humidade:</span> <span>${entry.field2} %</span></p>
-              <p><span class="label"><span class="icon">🔔</span>Vibração:</span> <span>${entry.field3 == 1 ? 'Detectada' : 'Não Detectada'}</span></p>
-            </div>
-          `;
-
-          // Add data to chart
           chartData.labels.push(date.toLocaleTimeString('pt-BR'));
-          chartData.temperatures.push(parseFloat(entry.field1));
-          chartData.humidities.push(parseFloat(entry.field2));
+          chartData.humidities.push(parseFloat(entry.field1));
+          chartData.temperatures.push(parseFloat(entry.field2));
           chartData.vibrations.push(parseInt(entry.field3));
+          chartData.powerStates.push(parseInt(entry.field4));
         });
 
         // Update chart
         updateChart();
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        document.getElementById('readings').innerHTML = '<p class="error">Erro ao carregar os dados.</p>';
+        document.getElementById('latestReading').innerHTML = '<p class="error">Erro ao carregar os dados.</p>';
       }
     }
 
@@ -151,14 +143,6 @@
           labels: chartData.labels,
           datasets: [
             {
-              label: 'Temperatura (°C)',
-              data: chartData.temperatures,
-              borderColor: '#0288d1',
-              backgroundColor: 'rgba(2, 136, 209, 0.2)',
-              fill: true,
-              tension: 0.4
-            },
-            {
               label: 'Humidade (%)',
               data: chartData.humidities,
               borderColor: '#4fc3f7',
@@ -167,10 +151,26 @@
               tension: 0.4
             },
             {
+              label: 'Temperatura (°C)',
+              data: chartData.temperatures,
+              borderColor: '#0288d1',
+              backgroundColor: 'rgba(2, 136, 209, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
               label: 'Vibração (0/1)',
               data: chartData.vibrations,
               borderColor: '#ff6f61',
               backgroundColor: 'rgba(255, 111, 97, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Energia (0/1)',
+              data: chartData.powerStates,
+              borderColor: '#ffb300',
+              backgroundColor: 'rgba(255, 179, 0, 0.2)',
               fill: true,
               tension: 0.4
             }
