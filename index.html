@@ -64,6 +64,11 @@
       font-size: 16px;
       margin-top: 20px;
     }
+    .processing {
+      color: #0288d1;
+      font-size: 16px;
+      margin-top: 20px;
+    }
     #chartContainer {
       max-width: 800px;
       margin: 40px auto;
@@ -91,13 +96,25 @@
       powerStates: []
     };
 
-    async function fetchReadings() {
+    const maxRetries = 3;
+    const retryDelay = 5000; // 5 seconds
+
+    async function fetchReadingsWithRetry(attempt = 1) {
+      const latestReadingDiv = document.getElementById('latestReading');
+      latestReadingDiv.innerHTML = '<p class="processing">Carregando...</p>'; // Show processing state
+
       try {
         const response = await fetch(
-          'https://api.thingspeak.com/channels/2928081/feeds.json?api_key=R7JTT7FALUMYEIBZ&results=10'
+          'https://api.thingspeak.com/channels/2928081/feeds.json?api_key=R7JTT7FALUMYEIBZ&results=10',
+          { method: 'GET', mode: 'cors', cache: 'no-cache' }
         );
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`);
+        }
         const data = await response.json();
-        const latestReadingDiv = document.getElementById('latestReading');
+        if (!data.feeds || data.feeds.length === 0) {
+          throw new Error('No data returned from ThingSpeak');
+        }
 
         // Reset chart data
         chartData.labels = [];
@@ -130,8 +147,15 @@
         // Update chart
         updateChart();
       } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-        document.getElementById('latestReading').innerHTML = '<p class="error">Erro ao carregar os dados.</p>';
+        console.error(`Tentativa ${attempt} - Erro ao buscar dados:`, error.message);
+        console.error('Stack trace:', error.stack);
+
+        if (attempt < maxRetries) {
+          console.log(`Tentando novamente em ${retryDelay / 1000} segundos... (Tentativa ${attempt + 1}/${maxRetries})`);
+          setTimeout(() => fetchReadingsWithRetry(attempt + 1), retryDelay);
+        } else {
+          latestReadingDiv.innerHTML = `<p class="error">Erro ao carregar os dados após ${maxRetries} tentativas: ${error.message}</p>`;
+        }
       }
     }
 
@@ -197,8 +221,10 @@
       });
     }
 
-    fetchReadings();
-    setInterval(fetchReadings, 10000); // Reduced to 10 seconds for faster updates
+    // Initial fetch
+    fetchReadingsWithRetry();
+    // Regular fetch every 10 seconds
+    setInterval(fetchReadingsWithRetry, 10000);
   </script>
 </body>
 </html>
