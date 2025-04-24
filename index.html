@@ -96,6 +96,8 @@
       powerStates: []
     };
 
+    let tempHumChartInstance = null; // Store the chart instance
+
     const maxRetries = 3;
     const retryDelay = 5000; // 5 seconds
 
@@ -171,7 +173,15 @@
 
     function updateChart() {
       const ctx = document.getElementById('tempHumChart').getContext('2d');
-      new Chart(ctx, {
+
+      // Destroy the previous chart instance if it exists
+      if (tempHumChartInstance) {
+        tempHumChartInstance.destroy();
+        tempHumChartInstance = null; // Reset the instance
+      }
+
+      // Create a new chart instance
+      tempHumChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           labels: chartData.labels,
