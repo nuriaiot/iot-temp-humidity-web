@@ -136,14 +136,14 @@
         const humidity = latestEntry.field1 !== null ? latestEntry.field1 : 'N/A';
         const temperature = latestEntry.field2 !== null ? parseFloat(latestEntry.field2).toFixed(2) : 'N/A';
         const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada') : 'N/A';
-        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Presente' : 'Ausente') : 'N/A';
+        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detectada' : 'Ausente') : 'N/A';
 
         latestReadingDiv.innerHTML = `
           <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
-          <p><span class="label"><span class="icon">💧</span>Humidade:</span> <span>${humidity} %</span></p>
-          <p><span class="label"><span class="icon">🌡️</span>Temperatura:</span> <span>${temperature} °C</span></p>
-          <p><span class="label"><span class="icon">🔔</span>Vibração:</span> <span>${vibration}</span></p>
-          <p><span class="label"><span class="icon">⚡</span>Energia:</span> <span>${powerState}</span></p>
+          <p><span class="label"><span class="icon">💧</span>Humidade do ambiente da:</span> <span>${humidity} %</span></p>
+          <p><span class="label"><span class="icon">🌡️</span>Temperatura do ambiente:</span> <span>${temperature} °C</span></p>
+          <p><span class="label"><span class="icon">🔔</span>Vibração do poste:</span> <span>${vibration}</span></p>
+          <p><span class="label"><span class="icon">⚡</span>Corrente Eléctrica:</span> <span>${powerState}</span></p>
         `;
 
         // Populate chart data with all entries
