@@ -102,7 +102,7 @@
     const retryDelay = 5000; // 5 seconds
     let lastVibrationState = null; // Track the last vibration state
     let lastTimestamp = null; // Track the last displayed timestamp
-    let pollingInterval = 10000; // Default polling interval (10 seconds)
+    let pollingInterval = 5000; // Default polling interval (reduced to 5 seconds)
     let pollingTimer = null; // Store the interval timer
 
     async function fetchReadingsWithRetry(attempt = 1) {
@@ -280,10 +280,10 @@
 
       // Revert to the default interval after the specified duration
       setTimeout(() => {
-        if (pollingInterval !== 10000) {
-          console.log('Reverting to default polling interval (10 seconds).');
+        if (pollingInterval !== 5000) {
+          console.log('Reverting to default polling interval (5 seconds).');
           clearInterval(pollingTimer);
-          pollingInterval = 10000;
+          pollingInterval = 5000;
           pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
         }
       }, duration);
