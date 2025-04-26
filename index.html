@@ -93,7 +93,8 @@
       humidities: [],
       temperatures: [],
       vibrations: [],
-      powerStates: []
+      powerStates: [],
+      waterStates: []
     };
 
     let tempHumChartInstance = null; // Store the chart instance
@@ -142,6 +143,7 @@
         chartData.temperatures = [];
         chartData.vibrations = [];
         chartData.powerStates = [];
+        chartData.waterStates = [];
 
         // Update the last timestamp
         lastTimestamp = latestTimestamp;
@@ -154,9 +156,11 @@
         const temperature = latestEntry.field2 !== null ? parseFloat(latestEntry.field2).toFixed(2) : 'N/A';
         const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada') : 'N/A';
         const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detectada' : 'Ausente') : 'N/A';
+        const waterState = latestEntry.field5 !== null ? (latestEntry.field5 == 1 ? 'Detected' : 'Sem risco.') : 'N/A';
 
         // Log the vibration status update
         console.log(`Updating pole vibration status: ${vibration}`);
+        console.log(`Updating water conductivity status: ${waterState}`);
 
         // Show the updated variables
         latestReadingDiv.innerHTML = `
@@ -165,6 +169,7 @@
           <p><span class="label"><span class="icon">🌡️</span>Temperatura do ambiente:</span> <span>${temperature} °C</span></p>
           <p><span class="label"><span class="icon">🔔</span>Pole Vibration:</span> <span>${vibration}</span></p>
           <p><span class="label"><span class="icon">⚡</span>Corrente Eléctrica:</span> <span>${powerState}</span></p>
+          <p><span class="label"><span class="icon">💦</span>Estado de condutibilidade:</span> <span>${waterState}</span></p>
         `;
 
         // Clear any existing timeout
@@ -196,6 +201,7 @@
           chartData.temperatures.push(entry.field2 !== null ? parseFloat(entry.field2) : null);
           chartData.vibrations.push(entry.field3 !== null ? parseInt(entry.field3) : null);
           chartData.powerStates.push(entry.field4 !== null ? parseInt(entry.field4) : null);
+          chartData.waterStates.push(entry.field5 !== null ? parseInt(entry.field5) : null);
         });
 
         // Update chart
@@ -257,6 +263,14 @@
               data: chartData.powerStates,
               borderColor: '#ffb300',
               backgroundColor: 'rgba(255, 179, 0, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Condutibilidade (0/1)',
+              data: chartData.waterStates,
+              borderColor: '#4caf50',
+              backgroundColor: 'rgba(76, 175, 80, 0.2)',
               fill: true,
               tension: 0.4
             }
