@@ -97,6 +97,7 @@
     };
 
     let tempHumChartInstance = null; // Store the chart instance
+    let displayTimeout = null; // Store the timeout for reverting the display
 
     const maxRetries = 3;
     const retryDelay = 5000; // 5 seconds
@@ -107,7 +108,7 @@
 
     async function fetchReadingsWithRetry(attempt = 1) {
       const latestReadingDiv = document.getElementById('latestReading');
-      latestReadingDiv.innerHTML = '<p class="processing">Actualizando as Variávies...</p>'; // Show processing state
+      latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>'; // Updated processing message
 
       try {
         const response = await fetch(
@@ -151,12 +152,13 @@
         // Handle potential null values for fields
         const humidity = latestEntry.field1 !== null ? latestEntry.field1 : 'N/A';
         const temperature = latestEntry.field2 !== null ? parseFloat(latestEntry.field2).toFixed(2) : 'N/A';
-        const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detected' : 'Not Detected') : 'N/A';
-        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detected' : 'Ausente') : 'N/A';
+        const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada') : 'N/A';
+        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detectada' : 'Ausente') : 'N/A';
 
         // Log the vibration status update
         console.log(`Updating pole vibration status: ${vibration}`);
 
+        // Show the updated variables
         latestReadingDiv.innerHTML = `
           <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
           <p><span class="label"><span class="icon">💧</span>Humidade do ambiente da:</span> <span>${humidity} %</span></p>
@@ -164,6 +166,17 @@
           <p><span class="label"><span class="icon">🔔</span>Pole Vibration:</span> <span>${vibration}</span></p>
           <p><span class="label"><span class="icon">⚡</span>Corrente Eléctrica:</span> <span>${powerState}</span></p>
         `;
+
+        // Clear any existing timeout
+        if (displayTimeout) {
+          clearTimeout(displayTimeout);
+        }
+
+        // Set a timeout to revert to "Monitoriando as Variáveis do poste" after 20 seconds
+        displayTimeout = setTimeout(() => {
+          latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>';
+          console.log('Reverted to Monitoriando as Variáveis do poste after 20 seconds');
+        }, 20000);
 
         // Check for vibration state change
         const currentVibrationState = latestEntry.field3 !== null ? parseInt(latestEntry.field3) : null;
