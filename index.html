@@ -100,8 +100,9 @@
 
     const maxRetries = 3;
     const retryDelay = 5000; // 5 seconds
+    let lastVibrationState = null; // Track the last vibration state
     let lastTimestamp = null; // Track the last displayed timestamp
-    const pollingInterval = 15000; // Poll every 15 seconds to match ESP8266 update interval
+    let pollingInterval = 5000; // Default polling interval (5 seconds)
     let pollingTimer = null; // Store the interval timer
 
     async function fetchReadingsWithRetry(attempt = 1) {
@@ -150,19 +151,29 @@
         // Handle potential null values for fields
         const humidity = latestEntry.field1 !== null ? latestEntry.field1 : 'N/A';
         const temperature = latestEntry.field2 !== null ? parseFloat(latestEntry.field2).toFixed(2) : 'N/A';
-        const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada') : 'N/A';
-        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detectada' : 'Ausente') : 'N/A';
+        const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detected' : 'Not Detected') : 'N/A';
+        const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detected' : 'Ausente') : 'N/A';
 
-        // Log the update
-        console.log(`Updating readings - Humidity: ${humidity}%, Temperature: ${temperature}°C, Vibration: ${vibration}, Power: ${powerState}`);
+        // Log the vibration status update
+        console.log(`Updating pole vibration status: ${vibration}`);
 
         latestReadingDiv.innerHTML = `
           <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
           <p><span class="label"><span class="icon">💧</span>Humidade do ambiente da:</span> <span>${humidity} %</span></p>
           <p><span class="label"><span class="icon">🌡️</span>Temperatura do ambiente:</span> <span>${temperature} °C</span></p>
-          <p><span class="label"><span class="icon">🔔</span>Vibração do poste:</span> <span>${vibration}</span></p>
+          <p><span class="label"><span class="icon">🔔</span>Pole Vibration:</span> <span>${vibration}</span></p>
           <p><span class="label"><span class="icon">⚡</span>Corrente Eléctrica:</span> <span>${powerState}</span></p>
         `;
+
+        // Check for vibration state change
+        const currentVibrationState = latestEntry.field3 !== null ? parseInt(latestEntry.field3) : null;
+        if (lastVibrationState !== null && currentVibrationState !== null && lastVibrationState !== currentVibrationState) {
+          console.log(`Vibration state changed from ${lastVibrationState} to ${currentVibrationState}! Temporarily increasing polling frequency.`);
+          adjustPollingInterval(1000, 5000); // Poll every 1 second for 5 seconds
+        } else {
+          console.log(`No vibration state change. Last: ${lastVibrationState}, Current: ${currentVibrationState}`);
+        }
+        lastVibrationState = currentVibrationState;
 
         // Populate chart data with all entries
         data.feeds.forEach(entry => {
@@ -259,9 +270,31 @@
       });
     }
 
+    // Function to dynamically adjust the polling interval
+    function adjustPollingInterval(newInterval, duration) {
+      // Clear the existing interval
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+      }
+
+      // Set the new polling interval
+      pollingInterval = newInterval;
+      pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
+
+      // Revert to the default interval after the specified duration
+      setTimeout(() => {
+        if (pollingInterval !== 5000) {
+          console.log('Reverting to default polling interval (5 seconds).');
+          clearInterval(pollingTimer);
+          pollingInterval = 5000;
+          pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
+        }
+      }, duration);
+    }
+
     // Initial fetch
     fetchReadingsWithRetry();
-    // Set the polling interval
+    // Set the initial polling interval
     pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
   </script>
 </body>
