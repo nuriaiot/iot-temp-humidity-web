@@ -101,6 +101,7 @@
     const maxRetries = 3;
     const retryDelay = 5000; // 5 seconds
     let lastVibrationState = null; // Track the last vibration state
+    let lastTimestamp = null; // Track the last displayed timestamp
     let pollingInterval = 10000; // Default polling interval (10 seconds)
     let pollingTimer = null; // Store the interval timer
 
@@ -124,6 +125,16 @@
         // Log the raw data for debugging
         console.log('Raw ThingSpeak data:', data);
 
+        // Get the latest entry
+        const latestEntry = data.feeds[data.feeds.length - 1];
+        const latestTimestamp = latestEntry.created_at;
+
+        // Check if the data has changed (based on timestamp)
+        if (lastTimestamp !== null && latestTimestamp === lastTimestamp) {
+          console.log('No new data (timestamp unchanged). Skipping display update.');
+          return; // Skip updating the display if the data hasn't changed
+        }
+
         // Reset chart data
         chartData.labels = [];
         chartData.humidities = [];
@@ -131,8 +142,10 @@
         chartData.vibrations = [];
         chartData.powerStates = [];
 
-        // Display only the latest reading
-        const latestEntry = data.feeds[data.feeds.length - 1];
+        // Update the last timestamp
+        lastTimestamp = latestTimestamp;
+
+        // Display the latest reading
         const date = new Date(latestEntry.created_at);
 
         // Handle potential null values for fields
@@ -152,8 +165,10 @@
         // Check for vibration state change
         const currentVibrationState = latestEntry.field3 !== null ? parseInt(latestEntry.field3) : null;
         if (lastVibrationState !== null && currentVibrationState !== null && lastVibrationState !== currentVibrationState) {
-          console.log('Vibration state changed! Temporarily increasing polling frequency.');
+          console.log(`Vibration state changed from ${lastVibrationState} to ${currentVibrationState}! Temporarily increasing polling frequency.`);
           adjustPollingInterval(1000, 5000); // Poll every 1 second for 5 seconds
+        } else {
+          console.log(`No vibration state change. Last: ${lastVibrationState}, Current: ${currentVibrationState}`);
         }
         lastVibrationState = currentVibrationState;
 
