@@ -93,22 +93,23 @@
       humidities: [],
       temperatures: [],
       vibrations: [],
-      powerStates: []
+      powerStates: [],
+      waterStates: []
     };
 
-    let tempHumChartInstance = null; // Store the chart instance
-    let displayTimeout = null; // Store the timeout for reverting the display
+    let tempHumChartInstance = null; // Armazena a instância do gráfico
+    let displayTimeout = null; // Armazena o timeout para reverter a exibição
 
     const maxRetries = 3;
-    const retryDelay = 5000; // 5 seconds
-    let lastVibrationState = null; // Track the last vibration state
-    let lastTimestamp = null; // Track the last displayed timestamp
-    let pollingInterval = 5000; // Default polling interval (5 seconds)
-    let pollingTimer = null; // Store the interval timer
+    const retryDelay = 5000; // 5 segundos
+    let lastVibrationState = null; // Rastreia o último estado de vibração
+    let lastTimestamp = null; // Rastreia o último timestamp exibido
+    let pollingInterval = 2000; // Intervalo de polling reduzido para 2 segundos
+    let pollingTimer = null; // Armazena o timer de intervalo
 
     async function fetchReadingsWithRetry(attempt = 1) {
       const latestReadingDiv = document.getElementById('latestReading');
-      latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>'; // Updated processing message
+      latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>';
 
       try {
         const response = await fetch(
@@ -116,79 +117,83 @@
           { method: 'GET', mode: 'cors', cache: 'no-cache' }
         );
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`);
+          throw new Error(`Erro HTTP! Status: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
         if (!data.feeds || data.feeds.length === 0) {
-          throw new Error('No data returned from ThingSpeak');
+          throw new Error('Nenhum dado retornado do ThingSpeak');
         }
 
-        // Log the raw data for debugging
-        console.log('Raw ThingSpeak data:', data);
+        // Log dos dados brutos para depuração
+        console.log('Dados brutos do ThingSpeak:', data);
 
-        // Get the latest entry
+        // Obtém a última entrada
         const latestEntry = data.feeds[data.feeds.length - 1];
         const latestTimestamp = latestEntry.created_at;
 
-        // Check if the data has changed (based on timestamp)
+        // Verifica se os dados mudaram (com base no timestamp)
         if (lastTimestamp !== null && latestTimestamp === lastTimestamp) {
-          console.log('No new data (timestamp unchanged). Skipping display update.');
-          return; // Skip updating the display if the data hasn't changed
+          console.log('Nenhum dado novo (timestamp inalterado). Ignorando atualização de exibição.');
+          return; // Ignora a atualização se os dados não mudaram
         }
 
-        // Reset chart data
+        // Reseta os dados do gráfico
         chartData.labels = [];
         chartData.humidities = [];
         chartData.temperatures = [];
         chartData.vibrations = [];
         chartData.powerStates = [];
+        chartData.waterStates = [];
 
-        // Update the last timestamp
+        // Atualiza o último timestamp
         lastTimestamp = latestTimestamp;
 
-        // Display the latest reading
+        // Exibe a última leitura
         const date = new Date(latestEntry.created_at);
 
-        // Handle potential null values for fields
+        // Trata valores nulos para os campos
         const humidity = latestEntry.field1 !== null ? latestEntry.field1 : 'N/A';
         const temperature = latestEntry.field2 !== null ? parseFloat(latestEntry.field2).toFixed(2) : 'N/A';
         const vibration = latestEntry.field3 !== null ? (latestEntry.field3 == 1 ? 'Detectada' : 'Não Detectada') : 'N/A';
         const powerState = latestEntry.field4 !== null ? (latestEntry.field4 == 1 ? 'Detectada' : 'Ausente') : 'N/A';
+        const waterState = latestEntry.field5 !== null ? (latestEntry.field5 == 1 ? 'Detectado' : 'Sem risco.') : 'N/A';
 
-        // Log the vibration status update
-        console.log(`Updating pole vibration status: ${vibration}`);
+        // Log do status de vibração e nível de água
+        console.log(`Atualizando status de vibração do poste: ${vibration}`);
+        console.log(`Atualizando status de condutibilidade: ${waterState}`);
 
-        // Show the updated variables
+        // Exibe as variáveis atualizadas
         latestReadingDiv.innerHTML = `
           <p><span class="label">Data e Hora:</span> ${date.toLocaleString('pt-BR')}</p>
           <p><span class="label"><span class="icon">💧</span>Humidade do ambiente da:</span> <span>${humidity} %</span></p>
           <p><span class="label"><span class="icon">🌡️</span>Temperatura do ambiente:</span> <span>${temperature} °C</span></p>
           <p><span class="label"><span class="icon">🔔</span>Vibração do Poste:</span> <span>${vibration}</span></p>
           <p><span class="label"><span class="icon">⚡</span>Corrente Eléctrica:</span> <span>${powerState}</span></p>
+          <p><span class="label"><span class="icon">💦</span>Estado de condutibilidade:</span> <span>${waterState}</span></p>
         `;
 
-        // Clear any existing timeout
+        // Limpa qualquer timeout existente
         if (displayTimeout) {
           clearTimeout(displayTimeout);
         }
 
-        // Set a timeout to revert to "Monitoriando as Variáveis do poste" after 20 seconds
+        // Define um timeout para reverter para "Monitoriando as Variáveis do poste" após 20 segundos
         displayTimeout = setTimeout(() => {
           latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>';
-          console.log('Reverted to Monitoriando as Variáveis do poste after 20 seconds');
+          console.log('Revertido para Monitoriando as Variáveis do poste após 20 segundos');
         }, 20000);
 
-        // Check for vibration state change
+        // Verifica mudança no estado de vibração
         const currentVibrationState = latestEntry.field3 !== null ? parseInt(latestEntry.field3) : null;
         if (lastVibrationState !== null && currentVibrationState !== null && lastVibrationState !== currentVibrationState) {
-          console.log(`Vibration state changed from ${lastVibrationState} to ${currentVibrationState}! Temporarily increasing polling frequency.`);
-          adjustPollingInterval(1000, 5000); // Poll every 1 second for 5 seconds
+          console.log(`Estado de vibração mudou de ${lastVibrationState} para ${currentVibrationState}! Aumentando temporariamente a frequência de polling.`);
+          adjustPollingInterval(1000, 5000); // Polling a cada 1 segundo por 5 segundos
         } else {
-          console.log(`No vibration state change. Last: ${lastVibrationState}, Current: ${currentVibrationState}`);
+          console.log(`Nenhuma mudança no estado de vibração. Último: ${lastVibrationState}, Atual: ${currentVibrationState}`);
         }
         lastVibrationState = currentVibrationState;
 
-        // Populate chart data with all entries
+        // Popula os dados do gráfico com todas as entradas
         data.feeds.forEach(entry => {
           const date = new Date(entry.created_at);
           chartData.labels.push(date.toLocaleTimeString('pt-BR'));
@@ -196,13 +201,14 @@
           chartData.temperatures.push(entry.field2 !== null ? parseFloat(entry.field2) : null);
           chartData.vibrations.push(entry.field3 !== null ? parseInt(entry.field3) : null);
           chartData.powerStates.push(entry.field4 !== null ? parseInt(entry.field4) : null);
+          chartData.waterStates.push(entry.field5 !== null ? parseInt(entry.field5) : null);
         });
 
-        // Update chart
+        // Atualiza o gráfico
         updateChart();
       } catch (error) {
         console.error(`Tentativa ${attempt} - Erro ao buscar dados:`, error.message);
-        console.error('Stack trace:', error.stack);
+        console.error('Rastreamento de pilha:', error.stack);
 
         if (attempt < maxRetries) {
           console.log(`Tentando novamente em ${retryDelay / 1000} segundos... (Tentativa ${attempt + 1}/${maxRetries})`);
@@ -216,13 +222,13 @@
     function updateChart() {
       const ctx = document.getElementById('tempHumChart').getContext('2d');
 
-      // Destroy the previous chart instance if it exists
+      // Destrói a instância anterior do gráfico, se existir
       if (tempHumChartInstance) {
         tempHumChartInstance.destroy();
-        tempHumChartInstance = null; // Reset the instance
+        tempHumChartInstance = null; // Reseta a instância
       }
 
-      // Create a new chart instance
+      // Cria uma nova instância do gráfico
       tempHumChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -253,10 +259,18 @@
               tension: 0.4
             },
             {
-              label: 'Energia (0/1)',
+              label: 'Corrente (0/1)',
               data: chartData.powerStates,
               borderColor: '#ffb300',
               backgroundColor: 'rgba(255, 179, 0, 0.2)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Condutibilidade (0/1)',
+              data: chartData.waterStates,
+              borderColor: '#4caf50',
+              backgroundColor: 'rgba(76, 175, 80, 0.2)',
               fill: true,
               tension: 0.4
             }
@@ -283,31 +297,31 @@
       });
     }
 
-    // Function to dynamically adjust the polling interval
+    // Função para ajustar dinamicamente o intervalo de polling
     function adjustPollingInterval(newInterval, duration) {
-      // Clear the existing interval
+      // Limpa o intervalo existente
       if (pollingTimer) {
         clearInterval(pollingTimer);
       }
 
-      // Set the new polling interval
+      // Define o novo intervalo de polling
       pollingInterval = newInterval;
       pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
 
-      // Revert to the default interval after the specified duration
+      // Reverte para o intervalo padrão após a duração especificada
       setTimeout(() => {
-        if (pollingInterval !== 5000) {
-          console.log('Reverting to default polling interval (5 seconds).');
+        if (pollingInterval !== 2000) {
+          console.log('Revertendo para o intervalo de polling padrão (2 segundos).');
           clearInterval(pollingTimer);
-          pollingInterval = 5000;
+          pollingInterval = 2000;
           pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
         }
       }, duration);
     }
 
-    // Initial fetch
+    // Busca inicial
     fetchReadingsWithRetry();
-    // Set the initial polling interval
+    // Define o intervalo de polling inicial
     pollingTimer = setInterval(fetchReadingsWithRetry, pollingInterval);
   </script>
 </body>
