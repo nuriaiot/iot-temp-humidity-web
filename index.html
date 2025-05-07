@@ -177,11 +177,11 @@
           clearTimeout(displayTimeout);
         }
 
-        // Define um timeout para reverter para "Monitoriando as Variáveis do poste" após 20 segundos
+        // Define um timeout de 10 segundos para reverter para "Monitoriando as Variáveis do poste"
         displayTimeout = setTimeout(() => {
           latestReadingDiv.innerHTML = '<p class="processing">Monitoriando as Variáveis do poste</p>';
-          console.log('Revertido para Monitoriando as Variáveis do poste após 20 segundos');
-        }, 20000);
+          console.log('Revertido para Monitoriando as Variáveis do poste após 10 segundos');
+        }, 10000);
 
         // Verifica mudança no estado de vibração
         const currentVibrationState = latestEntry.field3 !== null ? parseInt(latestEntry.field3) : null;
